@@ -20,11 +20,16 @@ module.exports = gql`
     getUsageCount: Int!
   }
 
-  type Mutation {
-    startSubscription: String! # Returns Stripe Checkout URL
-    donate(amount: Float!): String! # Returns Stripe Checkout URL
-    incrementUsage(amount: Int!): Boolean!
-    register(email: String!, password: String!): String! # returns JWT
-    login(email: String!, password: String!): String! # returns JWT
-  }
+type Mutation {
+  startSubscription: String!
+  donate(amount: Float!): String!
+  incrementUsage(amount: Int!): Boolean!
+  register(email: String!, password: String!): String!
+  login(email: String!, password: String!): String!
+
+  # 🆕 Password reset mutations
+  requestPasswordReset(email: String!): String!
+  resetPassword(token: String!, newPassword: String!): String!
+}
+
 `;
