@@ -4,6 +4,19 @@ const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const bcrypt = require("bcrypt");
 const { checkAndResetUsage } = require("../utils/limiter.js");
+const crypto = require("crypto");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "Yahoo",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // Your Yahoo app password
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
 
 module.exports = {
   Query: {
@@ -12,6 +25,7 @@ module.exports = {
       const foundUser = await User.findById(user._id);
       return foundUser?.subscriptionStatus === "active";
     },
+
     getUsageCount: async (_, __, { user }) => {
       if (!user) throw new Error("Unauthorized");
       const foundUser = await User.findById(user._id);
@@ -40,7 +54,7 @@ module.exports = {
 
       return session.url;
     },
-    // Handle donations using Stripe Checkout
+
     donate: async (_, { amount }, { user }) => {
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
@@ -63,25 +77,17 @@ module.exports = {
       return session.url;
     },
 
-    // Increment usage count for the user
     incrementUsage: async (_, { amount }, { user }) => {
       if (!user) throw new Error("Unauthorized");
-
       const foundUser = await User.findById(user._id);
       if (!foundUser) throw new Error("User not found");
-
-      console.log("📥 Incrementing usage by:", amount);
-
       await checkAndResetUsage(foundUser, amount);
-      console.log("✅ User saved to MongoDB.");
       return true;
     },
-    // Register a new user and return a JWT token
+
     register: async (_, { email, password }) => {
       const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        throw new Error("User already exists");
-      }
+      if (existingUser) throw new Error("User already exists");
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const newUser = await User.create({
@@ -94,26 +100,62 @@ module.exports = {
       const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
-
       return token;
     },
-    // Login an existing user and return a JWT token
+
     login: async (_, { email, password }) => {
       const user = await User.findOne({ email });
-      if (!user) {
-        throw new Error("Invalid credentials");
-      }
+      if (!user) throw new Error("Invalid credentials");
 
       const isValid = await bcrypt.compare(password, user.password);
-      if (!isValid) {
-        throw new Error("Invalid credentials");
-      }
+      if (!isValid) throw new Error("Invalid credentials");
 
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
-
       return token;
+    },
+
+    requestPasswordReset: async (_, { email }) => {
+      const user = await User.findOne({ email });
+      if (!user) throw new Error("No user found with that email.");
+
+      const token = crypto.randomBytes(32).toString("hex");
+      user.resetToken = token;
+      user.resetTokenExpiry = Date.now() + 1000 * 60 * 60; // 1 hour
+      await user.save();
+
+      const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
+      await transporter.sendMail({
+        to: user.email,
+        from: process.env.EMAIL_USER,
+        subject: "Your Password Reset Link",
+        html: `
+          <h3>Password Reset Requested</h3>
+          <p>Click <a href="${resetLink}">here</a> to reset your password.</p>
+          <p>This link will expire in 1 hour.</p>
+        `,
+      });
+
+      return "Password reset email sent.";
+    },
+
+    resetPassword: async (_, { token, newPassword }) => {
+      const user = await User.findOne({
+        resetToken: token,
+        resetTokenExpiry: { $gt: Date.now() },
+      });
+
+      if (!user) throw new Error("Invalid or expired token.");
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      user.password = hashed;
+      user.resetToken = undefined;
+      user.resetTokenExpiry = undefined;
+      await user.save();
+
+      return "Password reset successful.";
     },
   },
 };
