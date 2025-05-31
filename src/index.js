@@ -74,17 +74,21 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
 
 // 🌐 Allowlist for CORS: frontend, extension, localhost
 const allowedOrigins = [
-  process.env.CLIENT_URL, // e.g., https://next-auth-reset.vercel.app
-  "chrome-extension://",
-  "http://localhost:3000", // Local frontend dev
+  process.env.CLIENT_URL,            // e.g., https://next-auth-reset.vercel.app
+  "http://localhost:3000",           // Local frontend dev
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin) || origin.startsWith("chrome-extension://")) {
+      if (
+        !origin || 
+        allowedOrigins.includes(origin) || 
+        origin.startsWith("chrome-extension://")
+      ) {
         callback(null, true);
       } else {
+        console.warn("❌ CORS blocked request from:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -93,6 +97,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 
 
 app.use(helmet());
