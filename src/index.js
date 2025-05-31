@@ -75,7 +75,17 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || origin.startsWith("chrome-extension://") || origin === "null") {
+      const allowedOrigins = [
+        "https://next-auth-reset.vercel.app", // ✅ Your deployed frontend
+        "http://localhost:3000",              // ✅ Local dev frontend (optional)
+      ];
+
+      if (
+        !origin || 
+        origin.startsWith("chrome-extension://") || 
+        origin === "null" || 
+        allowedOrigins.includes(origin)
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -86,6 +96,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 
 app.use(helmet());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
