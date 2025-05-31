@@ -12,6 +12,7 @@ const jwt = require("jsonwebtoken");
 const User = require("./models/User");
 const bodyParser = require("body-parser");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 app.set("trust proxy", 1);
@@ -71,21 +72,17 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
   res.status(200).json({ received: true });
 });
 
-// 🛡 Middleware for everything ELSE (AFTER webhook)
+// 🌐 Allowlist for CORS: frontend, extension, localhost
+const allowedOrigins = [
+  process.env.CLIENT_URL, // e.g., https://next-auth-reset.vercel.app
+  "chrome-extension://",
+  "http://localhost:3000", // Local frontend dev
+];
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        "https://next-auth-reset.vercel.app", // ✅ Your deployed frontend
-        "http://localhost:3000",              // ✅ Local dev frontend (optional)
-      ];
-
-      if (
-        !origin || 
-        origin.startsWith("chrome-extension://") || 
-        origin === "null" || 
-        allowedOrigins.includes(origin)
-      ) {
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith("chrome-extension://")) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -101,7 +98,7 @@ app.use(
 app.use(helmet());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 app.use(express.json());
-app.options("*", cors()); // Fallback CORS
+app.options("*", cors());
 
 // 🧠 Apollo Server
 const server = new ApolloServer({
@@ -132,7 +129,7 @@ async function startServer() {
     app,
     cors: {
       origin: (origin, callback) => {
-        if (!origin || origin.startsWith("chrome-extension://") || origin === "null") {
+        if (!origin || allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           callback(new Error("Not allowed by CORS"));
