@@ -82,9 +82,9 @@ app.use(
   cors({
     origin: (origin, callback) => {
       if (
-        !origin || 
-        allowedOrigins.includes(origin) || 
-        origin.startsWith("chrome-extension://")
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        (origin && origin.startsWith("chrome-extension://"))
       ) {
         callback(null, true);
       } else {
@@ -97,6 +97,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 
 
 
