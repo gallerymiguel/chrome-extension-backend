@@ -21,7 +21,54 @@ connectDB();
 
 // ✅ Stripe webhook body parser (KEEP IT FIRST)
 app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
-  // your Stripe logic...
+  const sig = req.headers["stripe-signature"];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    console.log("📥 Stripe event received:", event.type);
+  } catch (err) {
+    console.error("❌ Webhook signature verification failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      const customerEmail = session.customer_email;
+      const stripeCustomerId = session.customer;
+
+      const updatedUser = await User.findOneAndUpdate(
+        { email: customerEmail },
+        {
+          subscriptionStatus: "active",
+          stripeCustomerId: stripeCustomerId,
+        }
+      );
+
+      if (updatedUser) {
+        console.log("✅ User subscription activated:", updatedUser.email);
+      } else {
+        console.warn("⚠️ User not found for email:", customerEmail);
+      }
+      break;
+    }
+
+    case "invoice.paid":
+      console.log("💰 Invoice paid!");
+      break;
+    case "invoice.payment_failed":
+      console.log("❌ Payment failed!");
+      break;
+    case "customer.subscription.deleted":
+      console.log("🔁 Subscription cancelled.");
+      break;
+    default:
+      console.log(`ℹ️ Event type: ${event.type}`);
+  }
+
+  res.status(200).json({ received: true });
 });
 
 // 🛡️ --- ADD CORS LOGGING + HEADER FIX HERE ---
