@@ -74,6 +74,7 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, r
 
 // 🌐 Allowlist for CORS: frontend, extension, localhost
 const allowedOrigins = [
+  "chrome-extension://bipdnlldaogehgnkegeifojojobendca",
   process.env.CLIENT_URL, // Your Vercel frontend
 ];
 
