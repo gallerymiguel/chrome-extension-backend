@@ -26,7 +26,7 @@ type Mutation {
   incrementUsage(amount: Int!): Boolean!
   register(email: String!, password: String!): String!
   login(email: String!, password: String!): String!
-
+  cancelSubscription: String!
   # 🆕 Password reset mutations
   requestPasswordReset(email: String!): String!
   resetPassword(token: String!, newPassword: String!): String!
