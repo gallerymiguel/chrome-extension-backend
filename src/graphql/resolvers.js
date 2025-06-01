@@ -1,5 +1,5 @@
 const User = require("../models/User");
-const PaymentLog = require("../models/PaymentLog");
+// const PaymentLog = require("../models/PaymentLog");
 const jwt = require("jsonwebtoken");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const bcrypt = require("bcrypt");
@@ -89,11 +89,20 @@ module.exports = {
       const existingUser = await User.findOne({ email });
       if (existingUser) throw new Error("User already exists");
 
+      // Password strength check
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]~]).{8,}$/;
+      if (!passwordRegex.test(password)) {
+        throw new Error(
+          "Password must be at least 8 characters, include 1 uppercase, 1 lowercase, 1 number, and 1 symbol."
+        );
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
       const newUser = await User.create({
         email,
         password: hashedPassword,
-        subscriptionStatus: "none",
+        subscriptionStatus: "inactive",
         usageCount: 0,
       });
 
@@ -120,42 +129,98 @@ module.exports = {
       const user = await User.findOne({ email });
       if (!user) throw new Error("No user found with that email.");
 
-      const token = crypto.randomBytes(32).toString("hex");
-      user.resetToken = token;
+      // Generate token
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+
+      // Store hashed token in DB
+      user.resetToken = hashedToken;
       user.resetTokenExpiry = Date.now() + 1000 * 60 * 60; // 1 hour
       await user.save();
 
-      const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+      // Send raw token in email link (not hashed)
+      const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${rawToken}`;
 
       await transporter.sendMail({
         to: user.email,
         from: process.env.EMAIL_USER,
         subject: "Your Password Reset Link",
         html: `
-          <h3>Password Reset Requested</h3>
-          <p>Click <a href="${resetLink}">here</a> to reset your password.</p>
-          <p>This link will expire in 1 hour.</p>
-        `,
+      <h3>Password Reset Requested</h3>
+      <p>Click <a href="${resetLink}">here</a> to reset your password.</p>
+      <p>This link will expire in 1 hour.</p>
+    `,
       });
 
       return "Password reset email sent.";
     },
 
     resetPassword: async (_, { token, newPassword }) => {
+      // Password strength check
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]~]).{8,}$/;
+      if (!passwordRegex.test(newPassword)) {
+        throw new Error(
+          "Password must be at least 8 characters, include 1 uppercase, 1 lowercase, 1 number, and 1 symbol."
+        );
+      }
+
+      // Hash the incoming token from the URL
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
+
       const user = await User.findOne({
-        resetToken: token,
+        resetToken: hashedToken,
         resetTokenExpiry: { $gt: Date.now() },
       });
 
       if (!user) throw new Error("Invalid or expired token.");
 
-      const hashed = await bcrypt.hash(newPassword, 10);
-      user.password = hashed;
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
       user.resetToken = undefined;
       user.resetTokenExpiry = undefined;
       await user.save();
 
       return "Password reset successful.";
+    },
+    
+    cancelSubscription: async (_, __, { user }) => {
+      if (!user) throw new Error("Unauthorized");
+
+      const foundUser = await User.findById(user._id);
+      if (!foundUser || !foundUser.stripeCustomerId)
+        throw new Error("No Stripe customer found.");
+
+      // Find the active Stripe subscription
+      const subscriptions = await stripe.subscriptions.list({
+        customer: foundUser.stripeCustomerId,
+        status: "active",
+      });
+
+      if (subscriptions.data.length === 0) {
+        throw new Error("No active subscription found.");
+      }
+
+      const subscription = subscriptions.data[0];
+
+      // Cancel the subscription at the end of the period
+      const cancelled = await stripe.subscriptions.update(subscription.id, {
+        cancel_at_period_end: true,
+      });
+
+      // Update your DB
+      foundUser.subscriptionStatus = "cancelled";
+      await foundUser.save();
+
+      return `Subscription will remain active until ${new Date(
+        cancelled.current_period_end * 1000
+      ).toLocaleDateString()}.`;
     },
   },
 };

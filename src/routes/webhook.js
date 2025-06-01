@@ -63,6 +63,53 @@ router.post(
         break;
       }
 
+      case "charge.refunded": {
+        const refund = event.data.object;
+        const stripeCustomerId = refund.customer;
+
+        if (!stripeCustomerId) {
+          console.error("❌ Missing Stripe customer ID on refund event.");
+          break;
+        }
+
+        // Cancel Stripe subscription
+        const subscriptions = await stripe.subscriptions.list({
+          customer: stripeCustomerId,
+          status: "active",
+        });
+
+        if (subscriptions.data.length > 0) {
+          const subId = subscriptions.data[0].id;
+          await stripe.subscriptions.del(subId);
+          console.log(
+            `🔒 Stripe subscription ${subId} cancelled for ${stripeCustomerId}`
+          );
+        } else {
+          console.log(
+            `ℹ️ No active subscription found for ${stripeCustomerId}`
+          );
+        }
+
+        // Update DB subscription status
+        const updatedUser = await User.findOneAndUpdate(
+          { stripeCustomerId },
+          { subscriptionStatus: "refunded" }
+        );
+
+        if (updatedUser) {
+          console.log(
+            `🔄 Subscription marked as refunded for ${updatedUser.email}`
+          );
+        } else {
+          console.warn(
+            "❌ No user found for Stripe customer ID:",
+            stripeCustomerId
+          );
+        }
+
+        break;
+      }
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
