@@ -88,6 +88,9 @@ module.exports = {
     register: async (_, { email, password }) => {
       const existingUser = await User.findOne({ email });
       if (existingUser) throw new Error("User already exists");
+      console.log("REGISTER: Raw password:", password);
+      console.log("REGISTER: Hashed password:", hashedPassword);
+      console.log("✅ New user created:", newUser.email);
 
       // Password strength check
       const passwordRegex =
@@ -115,7 +118,8 @@ module.exports = {
     login: async (_, { email, password }) => {
       const user = await User.findOne({ email });
       if (!user) throw new Error("Invalid credentials");
-
+      console.log("LOGIN: Input password:", password);
+      console.log("LOGIN: DB hashed password:", user.password);
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) throw new Error("Invalid credentials");
 
