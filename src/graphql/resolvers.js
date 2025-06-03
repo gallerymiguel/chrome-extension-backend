@@ -88,9 +88,8 @@ module.exports = {
     register: async (_, { email, password }) => {
       const existingUser = await User.findOne({ email });
       if (existingUser) throw new Error("User already exists");
+
       console.log("REGISTER: Raw password:", password);
-      console.log("REGISTER: Hashed password:", hashedPassword);
-      console.log("✅ New user created:", newUser.email);
 
       // Password strength check
       const passwordRegex =
@@ -102,12 +101,15 @@ module.exports = {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      console.log("REGISTER: Hashed password:", hashedPassword);
+
       const newUser = await User.create({
         email,
         password: hashedPassword,
         subscriptionStatus: "inactive",
         usageCount: 0,
       });
+      console.log("✅ New user created:", newUser.email);
 
       const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
