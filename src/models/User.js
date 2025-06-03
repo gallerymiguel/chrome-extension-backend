@@ -21,9 +21,10 @@ const userSchema = new mongoose.Schema({
   resetTokenExpiry: { type: Date },
 });
 
-// 🔒 Automatically hash password on save
+// 🔒 Password hashing middleware
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) return next(); // Only hash if password is changed
+  console.log("🚨 Hashing password for user:", this.email);
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });

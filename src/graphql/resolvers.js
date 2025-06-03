@@ -86,12 +86,10 @@ module.exports = {
     },
 
     register: async (_, { email, password }) => {
+
       const existingUser = await User.findOne({ email });
       if (existingUser) throw new Error("User already exists");
 
-      console.log("REGISTER: Raw password:", password);
-
-      // Password strength check
       const passwordRegex =
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?/{}[\]~]).{8,}$/;
       if (!passwordRegex.test(password)) {
@@ -100,29 +98,30 @@ module.exports = {
         );
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
-      console.log("REGISTER: Hashed password:", hashedPassword);
-
       const newUser = await User.create({
         email,
-        password: hashedPassword,
+        password, // ⬅️ Raw password only—let pre-save hook handle it!
         subscriptionStatus: "inactive",
         usageCount: 0,
       });
-      console.log("✅ New user created:", newUser.email);
 
       const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
         expiresIn: "7d",
       });
+
       return token;
     },
 
     login: async (_, { email, password }) => {
+      console.log("🚀 Login attempt for:", email);
       const user = await User.findOne({ email });
-      if (!user) throw new Error("Invalid credentials");
-      console.log("LOGIN: Input password:", password);
-      console.log("LOGIN: DB hashed password:", user.password);
+      if (!user) {
+        console.log("❌ User not found:", email);
+        throw new Error("Invalid credentials");
+      }
+
       const isValid = await bcrypt.compare(password, user.password);
+
       if (!isValid) throw new Error("Invalid credentials");
 
       const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
