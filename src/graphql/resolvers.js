@@ -189,7 +189,7 @@ module.exports = {
 
       return "Password reset successful.";
     },
-    
+
     cancelSubscription: async (_, __, { user }) => {
       if (!user) throw new Error("Unauthorized");
 
@@ -213,10 +213,6 @@ module.exports = {
       const cancelled = await stripe.subscriptions.update(subscription.id, {
         cancel_at_period_end: true,
       });
-
-      // Update your DB
-      foundUser.subscriptionStatus = "cancelled";
-      await foundUser.save();
 
       return `Subscription will remain active until ${new Date(
         cancelled.current_period_end * 1000
