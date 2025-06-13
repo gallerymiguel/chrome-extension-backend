@@ -9,12 +9,11 @@ let app;     // Express app
 beforeAll(async () => {
   // 1️⃣ spin up the throw-away Mongo
   mongo = await MongoMemoryServer.create();
-
   // 2️⃣ point the app's connectDB() to it
   process.env.MONGO_URI = mongo.getUri();      // <- make sure connectDB() uses this env var
-
   // 3️⃣ now require the app (connectDB runs automatically)
   app = require("../src/index");
+  process.env.JWT_SECRET = "devjwt1234567890devjwt1234567890";
 });
 
 afterEach(async () => {

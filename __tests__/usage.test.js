@@ -11,7 +11,7 @@ beforeAll(async () => {
   // spin up in-memory Mongo, point app to it, then load app
   mongo = await MongoMemoryServer.create();
   process.env.MONGO_URI = mongo.getUri();
-  process.env.JWT_SECRET = "test-secret";         // any string is fine for JWT verify
+  process.env.JWT_SECRET = "devjwt1234567890devjwt1234567890";       // any string is fine for JWT verify
   app = require("../src/index");
 });
 

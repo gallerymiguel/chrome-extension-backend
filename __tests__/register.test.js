@@ -11,6 +11,7 @@ beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
   process.env.MONGO_URI = mongo.getUri(); // so connectDB() uses in-mem DB
   app = require("../src/index"); // load Express after env is set
+  process.env.JWT_SECRET = "devjwt1234567890devjwt1234567890";
 });
 
 afterEach(async () => {
