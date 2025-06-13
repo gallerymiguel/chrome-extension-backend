@@ -82,7 +82,6 @@ const server = new ApolloServer({
   },
 });
 
-
 async function startServer() {
   await server.start();
 
@@ -99,7 +98,20 @@ async function startServer() {
       credentials: true,
     },
   });
-
+  /* ------------------------------------------------------------------ *
+   *  Test-only error handler – prints the real stack so Jest/CI logs   *
+   *  show why a resolver returned HTTP 500. Will NOT run in prod.      *
+   * ------------------------------------------------------------------ */
+  if (process.env.NODE_ENV === "test") {
+    // four-arg signature tells Express this is an error handler
+    // eslint-disable-next-line no-unused-vars
+    app.use((err, _req, res, _next) => {
+      // surface the stack trace in the runner log
+      // (console.error is silenced in production but fine in CI)
+      console.error("💥 Uncaught Express error:", err.stack || err);
+      res.status(500).json({ error: "internal" });
+    });
+  }
   if (require.main === module) {
     // run only when `node index.js`
     app.listen(PORT, () => {
