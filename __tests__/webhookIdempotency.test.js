@@ -5,12 +5,6 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 const User         = require("../src/models/User");
 
 /* ─── Mock Stripe globally ───────────────────────────────────────── */
-const mockSession  = {
-  id:               "cs_123",
-  customer:         "cus_abc",
-  customer_email:   "idempotent@test.com",
-  subscription:     "sub_123",
-};
 const mockSub      = {
   id:                "sub_123",
   current_period_end: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,

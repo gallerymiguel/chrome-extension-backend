@@ -76,10 +76,12 @@ const server = new ApolloServer({
       const user = await User.findById(decoded.id);
       return { user };
     } catch (err) {
+      console.warn("🔒 Token verification failed:", err.message);
       return { user: null };
     }
   },
 });
+
 
 async function startServer() {
   await server.start();

@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-require('dotenv').config();
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+require("dotenv").config();
 
 const verifyToken = async (token) => {
   if (!token) return null;
@@ -10,7 +10,8 @@ const verifyToken = async (token) => {
     const user = await User.findById(decoded.id);
     return user;
   } catch (err) {
-    console.warn('🔒 Invalid or expired token');
+    // ❶ err is now used, so no-unused-vars is happy
+    console.warn("🔒 Invalid or expired token:", err.message); 
     return null;
   }
 };
