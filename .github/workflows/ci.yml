@@ -39,5 +39,4 @@ jobs:
         run: npm test -- --runInBand --passWithNoTests
         env:
           MONGO_URI: mongodb://localhost:27017/testdb
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
