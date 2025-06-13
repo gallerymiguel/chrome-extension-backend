@@ -1,7 +1,7 @@
 // tests/register.test.js
-const request  = require("supertest");
+const request = require("supertest");
 const mongoose = require("mongoose");
-const User     = require("../src/models/User");
+const User = require("../src/models/User");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
 let mongo;
@@ -9,8 +9,8 @@ let app;
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
-  process.env.MONGO_URI = mongo.getUri();      // so connectDB() uses in-mem DB
-  app = require("../src/index");               // load Express after env is set
+  process.env.MONGO_URI = mongo.getUri(); // so connectDB() uses in-mem DB
+  app = require("../src/index"); // load Express after env is set
 });
 
 afterEach(async () => {
@@ -26,7 +26,7 @@ afterAll(async () => {
 
 test("new user can register and gets JWT", async () => {
   const variables = {
-    email:    "fresh@example.com",
+    email: "fresh@example.com",
     password: "StrongPass1!",
   };
 
@@ -42,9 +42,10 @@ test("new user can register and gets JWT", async () => {
     });
 
   // 1️⃣ HTTP + GraphQL basic checks
+  console.log("💥 GraphQL errors:", res.body.errors?.[0]?.message);
   expect(res.status).toBe(200);
   expect(res.body.errors).toBeUndefined();
-  expect(res.body.data.register).toMatch(/^ey/);    // assuming it returns a token
+  expect(res.body.data.register).toMatch(/^ey/); // assuming it returns a token
 
   // 2️⃣ Confirm the user is in DB
   const user = await User.findOne({ email: variables.email }).lean();
