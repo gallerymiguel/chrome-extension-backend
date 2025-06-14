@@ -1,20 +1,16 @@
-# 1. Use Node.js LTS base image
-FROM node:18
-
-# 2. Create app directory inside container
-WORKDIR /usr/src/app
-
-# 3. Copy dependency files first (for better caching)
-COPY package*.json ./
-
-# 4. Install dependencies
-RUN npm install
-
-# 5. Copy all other source code
-COPY . .
-
-# 6. Expose the port your backend listens on (adjust if needed)
-EXPOSE 4000
-
-# 7. Start the server
-CMD ["node", "src/index.js"]
+# ----------  Builder stage ----------
+    FROM node:18-alpine AS builder
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --omit=dev      # install prod deps only
+    COPY . .
+    
+    # ----------  Runtime stage ----------
+    FROM node:18-alpine
+    WORKDIR /app
+    # copy only the compiled app & node_modules from builder
+    COPY --from=builder /app ./
+    EXPOSE 4000
+    USER node                  # drop root
+    CMD ["node", "src/index.js"]
+     
