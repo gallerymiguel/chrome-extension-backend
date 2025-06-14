@@ -1,4 +1,8 @@
 node_modules
-.env
-debug
-uploads
+.git
+tests
+__tests__
+*.log
+.env*
+Dockerfile*
+docker-compose*.yml
