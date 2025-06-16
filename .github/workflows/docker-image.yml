@@ -1,4 +1,4 @@
-name: Test Docker Hub login
+name: Test Docker Hub login   # ← file header stays the same
 
 on:
   push:
@@ -6,13 +6,35 @@ on:
   pull_request:
 
 jobs:
-  login-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # ① login (already working)
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # ② figure out tags/labels (NEW)
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend
+          tags: |
+            type=raw,value=pr-${{ github.event.number }}
+            type=sha   # 8-char commit hash
+
+      # ③ build the image (NEW)
+      - name: Build (skip push on PR)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
