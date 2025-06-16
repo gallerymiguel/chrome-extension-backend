@@ -1,9 +1,9 @@
-name: Test Docker Hub login   # ← file header stays the same
+name: Build & Push Docker image
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    branches: [main]     # run on every push to main
+  pull_request:          # …and on every PR (build only, no push)
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - uses: docker/setup-buildx-action@v3      # ← NEW
+      - uses: docker/setup-buildx-action@v3
         with:
           install: true
 
@@ -27,10 +27,12 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend
           tags: |
-            type=raw,value=pr-${{ github.event.number }}
-            type=sha   # 8-char commit hash
+            # add 'latest' only when on the default branch (main)
+            type=raw,value=latest,enable={{is_default_branch}}
+            # always add short-sha tag
+            type=sha
 
-      - name: Build (skip push on PR)
+      - name: Build (push only on main)
         uses: docker/build-push-action@v5
         with:
           context: .
