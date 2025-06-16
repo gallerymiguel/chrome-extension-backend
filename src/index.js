@@ -9,68 +9,18 @@ const rateLimit = require("express-rate-limit");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const User = require("./models/User");
-const bodyParser = require("body-parser");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// const bodyParser = require("body-parser");
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const webhookRouter = require("./routes/webhook");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 app.set("trust proxy", 1);
+module.exports = app;
 
 // 🔌 Connect to MongoDB
 connectDB();
-
-// ✅ Stripe webhook body parser (KEEP IT FIRST)
-app.post("/webhook", bodyParser.raw({ type: "application/json" }), async (req, res) => {
-  const sig = req.headers["stripe-signature"];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-    console.log("📥 Stripe event received:", event.type);
-  } catch (err) {
-    console.error("❌ Webhook signature verification failed:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      const customerEmail = session.customer_email;
-      const stripeCustomerId = session.customer;
-
-      const updatedUser = await User.findOneAndUpdate(
-        { email: customerEmail },
-        {
-          subscriptionStatus: "active",
-          stripeCustomerId: stripeCustomerId,
-        }
-      );
-
-      if (updatedUser) {
-        console.log("✅ User subscription activated:", updatedUser.email);
-      } else {
-        console.warn("⚠️ User not found for email:", customerEmail);
-      }
-      break;
-    }
-
-    case "invoice.paid":
-      console.log("💰 Invoice paid!");
-      break;
-    case "invoice.payment_failed":
-      console.log("❌ Payment failed!");
-      break;
-    case "customer.subscription.deleted":
-      console.log("🔁 Subscription cancelled.");
-      break;
-    default:
-      console.log(`ℹ️ Event type: ${event.type}`);
-  }
-
-  res.status(200).json({ received: true });
-});
-
+app.use("/webhook", webhookRouter);
 // 🛡️ --- ADD CORS LOGGING + HEADER FIX HERE ---
 const allowedOrigins = [
   "chrome-extension://bipdnlldaogehgnkegeifojojobendca",
@@ -81,7 +31,7 @@ const allowedOrigins = [
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  if (allowedOrigins.includes(origin)) {
+  if (origin && allowedOrigins.includes(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
   }
@@ -119,10 +69,14 @@ const server = new ApolloServer({
     if (!token) return { user: null };
 
     try {
-      const decoded = jwt.verify(token.replace("Bearer ", ""), process.env.JWT_SECRET);
+      const decoded = jwt.verify(
+        token.replace("Bearer ", ""),
+        process.env.JWT_SECRET
+      );
       const user = await User.findById(decoded.id);
       return { user };
     } catch (err) {
+      console.warn("🔒 Token verification failed:", err.message);
       return { user: null };
     }
   },
@@ -144,10 +98,26 @@ async function startServer() {
       credentials: true,
     },
   });
-
-  app.listen(PORT, () => {
-    console.log(`✅ Server running at http://localhost:${PORT}${server.graphqlPath}`);
-  });
+  /* ------------------------------------------------------------------ *
+   *  Test-only error handler – prints the real stack so Jest/CI logs   *
+   *  show why a resolver returned HTTP 500. Will NOT run in prod.      *
+   * ------------------------------------------------------------------ */
+  if (process.env.NODE_ENV === "test") {
+    // four-arg signature tells Express this is an error handler
+    // eslint-disable-next-line no-unused-vars
+    app.use((err, _req, res, _next) => {
+      // surface the stack trace in the runner log
+      // (console.error is silenced in production but fine in CI)
+      console.error("💥 Uncaught Express error:", err.stack || err);
+      res.status(500).json({ error: "internal" });
+    });
+  }
+  if (require.main === module) {
+    // run only when `node index.js`
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  }
 }
 
 startServer();

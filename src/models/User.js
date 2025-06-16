@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    match: [/.+\@.+\..+/, "Invalid email format"],
+    match: [/.+@.+\..+/, "Invalid email format"],
   },
   password: { type: String, required: true },
   subscriptionStatus: {

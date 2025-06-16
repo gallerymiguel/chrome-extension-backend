@@ -1,3 +1,4 @@
+// utils/limiter.js
 async function checkAndResetUsage(
   user,
   incrementBy = 1000,
@@ -5,42 +6,37 @@ async function checkAndResetUsage(
 ) {
   const now = new Date();
 
-  if (!user.resetDate || now > user.resetDate) {
+  /* ───── Reset logic ──────────────────────────────────────────
+     • Only trigger if the user already has a resetDate **and**
+       we’ve passed it.
+     • After the reset, push resetDate forward one month (you can
+       tweak the interval if you bill differently).
+  ----------------------------------------------------------------*/
+  if (user.resetDate && now > user.resetDate) {
     user.usageCount = 0;
-    user.resetDate = getNextResetDate(user.email);
+    user.resetDate  = new Date(now.setMonth(now.getMonth() + 1));
+    console.log("🔄 Monthly usage reset; next resetDate:", user.resetDate);
   }
 
+  /* ───── Limit guard ────────────────────────────────────────── */
   if (user.usageCount + incrementBy > monthlyLimit) {
     throw new Error("❌ Monthly usage limit reached. Try again next cycle.");
   }
 
+  /* ───── Add the new usage ─────────────────────────────────── */
   user.usageCount += incrementBy;
 
-  // ✅ Log what's about to be saved
   console.log("💾 Saving updated usage:", {
     usageCount: user.usageCount,
-    resetDate: user.resetDate,
+    resetDate:  user.resetDate,
   });
-  console.log("🕓 Now:", now);
-  console.log("📅 Current resetDate:", user.resetDate);
 
-  // ✅ Actually persist the update
   try {
     await user.save();
     console.log("✅ User saved to MongoDB.");
   } catch (e) {
     console.error("❌ Failed to save user:", e);
   }
-}
-
-function getNextResetDate(userEmail = "unknown") {
-  const nextReset = new Date();
-  nextReset.setMonth(nextReset.getMonth() + 1);
-  console.log(
-    `🔄 Resetting usage for ${userEmail}. Next reset at: ${nextReset}`
-  );
-  return nextReset;
-  
 }
 
 module.exports = { checkAndResetUsage };
