@@ -1,19 +1,29 @@
-const pino = require("pino");
+// src/utils/logger.js
+const pino = require('pino');
 
-const isProd  = process.env.NODE_ENV === "production";
-const logger  = pino(
-  isProd
-    ? { level: "info" }                // compact JSON for prod
-    : { transport: {                  // human-readable in dev
-        target: "pino-pretty",
-        options: { colorize: true, translateTime: "SYS:standard" }
-      }}
-);
+const isProd = process.env.NODE_ENV === 'production';
+const logLevel = process.env.LOG_LEVEL || (isProd ? 'info' : 'debug');
 
-// quick aliases so existing console.* lines are easy to swap
+let options = { level: logLevel };
+
+if (!isProd) {
+  // Try to load pino-pretty – if it’s missing, fall back to raw JSON
+  try {
+    require.resolve('pino-pretty');
+    options.transport = {
+      target: 'pino-pretty',
+      options: { colorize: true, translateTime: 'SYS:standard' }
+    };
+  } catch {
+    console.warn('▶ pino-pretty not installed – using JSON logs');
+  }
+}
+
+const logger = pino(options);
+
 module.exports = {
-  log:   (...args) => logger.info(...args),
-  warn:  (...args) => logger.warn(...args),
-  error: (...args) => logger.error(...args),
-  raw:   logger,                       // full pino instance if you need it
+  log:   (...a) => logger.info(...a),
+  warn:  (...a) => logger.warn(...a),
+  error: (...a) => logger.error(...a),
+  raw:   logger,
 };
