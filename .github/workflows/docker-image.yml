@@ -51,15 +51,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'        # run only on main
+    if: github.ref == 'refs/heads/main'
     steps:
-      # 1) Install flyctl CLI (correct slug)
-      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: superfly/flyctl-actions/setup-flyctl@v1 # install CLI
 
-      # 2) Deploy the image just pushed as :latest
       - name: Fly deploy
-        run: flyctl deploy --remote-only \
-             --image "${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend:latest"
+        run: flyctl deploy --remote-only --image "${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend:latest"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
