@@ -2,8 +2,8 @@ name: Build & Push Docker image
 
 on:
   push:
-    branches: [main]           # run on every push to main
-  pull_request:                # …and on every PR (build only, no push)
+    branches: [main] # run on every push to main
+  pull_request: # …and on every PR (build only, no push)
 
 jobs:
   # -------------------------------------------------------
@@ -11,7 +11,7 @@ jobs:
   # -------------------------------------------------------
   build:
     runs-on: ubuntu-latest
-    outputs:                   # ← expose the tag to other jobs
+    outputs: # ← expose the tag to other jobs
       image: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
@@ -43,20 +43,23 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to:   type=gha,mode=max
+          cache-to: type=gha,mode=max
 
   # -------------------------------------------------------
   # 2) Deploy job — only runs on main after build succeeds
   # -------------------------------------------------------
   deploy:
-    needs: build                           # wait for build job
+    needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'    # skip on PRs
+    if: github.ref == 'refs/heads/main'        # run only on main
     steps:
-      - uses: superfly/flyctl-actions@1.5
-        with:
-          args: >
-            deploy --remote-only
-            --image=${{ needs.build.outputs.image }}
+      # 1) Install flyctl CLI (correct slug)
+      - uses: superfly/flyctl-actions/setup-flyctl@v1
+
+      # 2) Deploy the image just pushed as :latest
+      - name: Fly deploy
+        run: flyctl deploy --remote-only \
+             --image "${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend:latest"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
