@@ -53,9 +53,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - uses: superfly/flyctl-actions/setup-flyctl@v1
+      - uses: actions/checkout@v4 # makes fly.toml available
+      - uses: superfly/flyctl-actions/setup-flyctl@v1 # installs flyctl
 
       - name: Fly deploy
-        run: flyctl deploy --remote-only --app chrome-extension-backend-winter-rain-1308 --image "${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend:latest}"
+        run: flyctl deploy --remote-only --app chrome-extension-backend-winter-rain-1308 --image "${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend:latest"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
