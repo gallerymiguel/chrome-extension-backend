@@ -43,7 +43,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # add this line ↓ just once, then remove it next commit
+          no-cache: ${{ github.ref == 'refs/heads/main' }}
 
   # -------------------------------------------------------
   # 2) Deploy job — only runs on main after build succeeds

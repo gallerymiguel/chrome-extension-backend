@@ -33,7 +33,7 @@ jobs:
       - run: npm ci
 
       - name: Lint code
-        run: npm run lint # only works if you added the script
+        run: npm run lint
 
       - name: Run Jest tests
         run: npm test -- --runInBand --passWithNoTests
