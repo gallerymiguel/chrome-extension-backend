@@ -2,12 +2,17 @@ name: Build & Push Docker image
 
 on:
   push:
-    branches: [main]     # run on every push to main
-  pull_request:          # …and on every PR (build only, no push)
+    branches: [main]           # run on every push to main
+  pull_request:                # …and on every PR (build only, no push)
 
 jobs:
+  # -------------------------------------------------------
+  # 1) Build job — build & (on main) push the Docker image
+  # -------------------------------------------------------
   build:
     runs-on: ubuntu-latest
+    outputs:                   # ← expose the tag to other jobs
+      image: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,9 +32,7 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/chrome-extension-backend
           tags: |
-            # add 'latest' only when on the default branch (main)
             type=raw,value=latest,enable={{is_default_branch}}
-            # always add short-sha tag
             type=sha
 
       - name: Build (push only on main)
@@ -41,3 +44,19 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to:   type=gha,mode=max
+
+  # -------------------------------------------------------
+  # 2) Deploy job — only runs on main after build succeeds
+  # -------------------------------------------------------
+  deploy:
+    needs: build                           # wait for build job
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'    # skip on PRs
+    steps:
+      - uses: superfly/flyctl-actions@1.5
+        with:
+          args: >
+            deploy --remote-only
+            --image=${{ needs.build.outputs.image }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
