@@ -44,7 +44,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true # 👈 add just this line for ONE commit
+          # no-cache: true # 👈 add just this line for ONE commit
 
   # -------------------------------------------------------
   # 2) Deploy job — only runs on main after build succeeds
