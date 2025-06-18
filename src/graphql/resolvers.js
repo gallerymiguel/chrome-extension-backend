@@ -1,11 +1,19 @@
 const User = require("../models/User");
 // const PaymentLog = require("../models/PaymentLog");
 const jwt = require("jsonwebtoken");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const bcrypt = require("bcrypt");
 const { checkAndResetUsage } = require("../utils/limiter.js");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
+
+ // Only initialize Stripe if a real key is present
+ let stripe = null;
+ const key = process.env.STRIPE_SECRET_KEY;
+ if (typeof key === "string" && key.startsWith("sk_")) {
+   stripe = require("stripe")(key);
+ } else {
+   console.warn("⚠️  STRIPE_SECRET_KEY missing or invalid; Stripe disabled");
+ }
 
 const transporter = nodemailer.createTransport({
   service: "Yahoo",
