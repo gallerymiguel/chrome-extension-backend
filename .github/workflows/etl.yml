@@ -2,8 +2,8 @@ name: Scheduled Mongo ETL Export
 
 on:
   schedule:
-    - cron: '0 7 * * *' # Every day at 7 AM UTC (adjust as needed)
-  workflow_dispatch:      # Allows manual runs
+    - cron: '0 7 * * 1' # Every Monday at 7 AM UTC
+  workflow_dispatch:
 
 jobs:
   export-etl:
@@ -29,8 +29,14 @@ jobs:
       - name: Run ETL script
         run: python etl/report_etl.py
 
-      - name: Upload report.xlsx as workflow artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload report.xlsx to S3
+        uses: jakejarvis/s3-sync-action@v0.5.1
         with:
-          name: etl-report
-          path: report.xlsx
+          args: --acl private --exclude "*" --include "report.xlsx"
+        env:
+          AWS_S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          SOURCE_DIR: .
+          DEST_DIR: /
