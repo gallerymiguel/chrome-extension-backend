@@ -31,3 +31,13 @@ Thumbs.db
 *.crx
 *.pem
 *.p12
+
+.venv/
+venv/
+report.xlsx
+
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
