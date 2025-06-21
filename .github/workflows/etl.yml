@@ -2,7 +2,7 @@ name: Scheduled Mongo ETL Export
 
 on:
   schedule:
-    - cron: '0 7 * * 1' # Every Monday at 7 AM UTC
+    - cron: "0 7 * * 1" # Every Monday at 7 AM UTC
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -32,11 +32,9 @@ jobs:
       - name: Upload report.xlsx to S3
         uses: jakejarvis/s3-sync-action@v0.5.1
         with:
-          args: --acl private --exclude "*" --include "report.xlsx"
+          args: --acl private report.xlsx s3://$AWS_S3_BUCKET/
         env:
           AWS_S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          SOURCE_DIR: .
-          DEST_DIR: /
