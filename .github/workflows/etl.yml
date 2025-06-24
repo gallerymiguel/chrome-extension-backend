@@ -30,11 +30,10 @@ jobs:
         run: python etl/report_etl.py
 
       - name: Upload report.xlsx to S3
-        uses: jakejarvis/s3-sync-action@v0.5.1
-        with:
-          args: --acl private report.xlsx s3://$AWS_S3_BUCKET/
+        run: |
+          aws s3 cp report.xlsx s3://$S3_BUCKET_NAME/report.xlsx --acl private --region $AWS_REGION
         env:
-          AWS_S3_BUCKET: ${{ secrets.S3_BUCKET_NAME }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
