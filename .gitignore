@@ -41,3 +41,15 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+
+# Terraform state
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/terraform.tfstate
+infra/terraform.tfstate.backup
+infra/crash.log
+infra/override.tf
+infra/override.tf.json
+infra/*.tfstate
+infra/*.tfstate.*
