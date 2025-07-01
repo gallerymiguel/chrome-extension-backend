@@ -123,6 +123,18 @@ chrome-extension-backend/
 
 ---
 
+## Running on Linux
+
+Clone the repo, give the setup script permission, and run:
+
+```bash
+git clone https://github.com/gallerymiguel/chrome-extension-backend
+cd chrome-extension-backend
+chmod +x setup.sh
+./setup.sh
+
+---
+
 ## 🔐 Security Tips
 
 - Never expose `.env` or `uploads/` folder
