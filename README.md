@@ -150,4 +150,3 @@ Built by [@Miguel Urdiales](https://github.com/gallerymiguel)
 ## 🧼 License
 
 MIT — free to use, fork, and improve
-
