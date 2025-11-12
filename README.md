@@ -70,7 +70,7 @@ docker run -p 3000:3000 whisper-backend
 
 ---
 
-## 🧪 Example Queries
+## 🧪 GraphQL Example Queries
 
 #### `saveMission`
 
@@ -104,9 +104,9 @@ chrome-extension-backend/
 │   ├── models/          # MongoDB models (User, Mission, etc.)
 │   ├── utils/           # Auth, Whisper, Stripe helpers
 │   └── index.js         # Entry point
-│
 ├── .env
 ├── Dockerfile
+├── setup.sh         # Linux setup script
 ├── package.json
 └── README.md
 ```
@@ -115,11 +115,7 @@ chrome-extension-backend/
 
 ## 🌐 Deployment Checklist
 
-- [ ] Secrets configured in `.env` and Render
-- [ ] Docker container builds correctly
-- [ ] GraphQL playground is enabled for development only
-- [ ] Stripe set to **live mode** with real product price
-- [ ] CORS allows frontend domain (`localhost`, `chrome-extension://`, etc.)
+-
 
 ---
 
@@ -132,6 +128,7 @@ git clone https://github.com/gallerymiguel/chrome-extension-backend
 cd chrome-extension-backend
 chmod +x setup.sh
 ./setup.sh
+```
 
 ---
 
