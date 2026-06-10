@@ -1,4 +1,6 @@
 const express = require("express");
+const verifyToken = require("../utils/auth");
+const { checkAndResetUsage } = require("../utils/limiter");
 
 const router = express.Router();
 
@@ -6,6 +8,8 @@ const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
 const MAX_TRANSCRIPT_CHARS =
   Number.parseInt(process.env.MAX_TRANSCRIPT_CHARS, 10) || 50000;
+const AI_SUMMARY_USAGE_AMOUNT = 1000;
+const MONTHLY_USAGE_LIMIT = 8000;
 
 function normalizeStringArray(value) {
   if (!Array.isArray(value)) return [];
@@ -52,7 +56,35 @@ function buildPrompt({ transcript, title, platform, startTime, endTime }) {
   ].join("\n");
 }
 
-router.post("/summarize", async (req, res) => {
+async function requireAuth(req, res, next) {
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : null;
+
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const user = await verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  req.user = user;
+  return next();
+}
+
+async function resetExpiredUsageWindow(user) {
+  const now = new Date();
+  if (user.resetDate && now > user.resetDate) {
+    user.usageCount = 0;
+    user.resetDate = new Date(now.setMonth(now.getMonth() + 1));
+    await user.save();
+  }
+}
+
+router.post("/summarize", requireAuth, async (req, res) => {
   const { transcript, title, platform, startTime, endTime } = req.body || {};
 
   if (typeof transcript !== "string" || !transcript.trim()) {
@@ -70,6 +102,15 @@ router.post("/summarize", async (req, res) => {
   }
 
   try {
+    await resetExpiredUsageWindow(req.user);
+
+    if (req.user.usageCount + AI_SUMMARY_USAGE_AMOUNT > MONTHLY_USAGE_LIMIT) {
+      return res.status(403).json({
+        error: "Usage limit exceeded.",
+        code: "USAGE_LIMIT_REACHED",
+      });
+    }
+
     const openAiResponse = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
       headers: {
@@ -139,6 +180,7 @@ router.post("/summarize", async (req, res) => {
 
     const outputText = extractOutputText(data);
     const parsed = outputText ? JSON.parse(outputText) : null;
+    await checkAndResetUsage(req.user, AI_SUMMARY_USAGE_AMOUNT);
 
     return res.json(normalizeSummaryPayload(parsed));
   } catch (err) {
