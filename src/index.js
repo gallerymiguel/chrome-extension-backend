@@ -12,6 +12,7 @@ const User = require("./models/User");
 // const bodyParser = require("body-parser");
 // const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const webhookRouter = require("./routes/webhook");
+const aiRouter = require("./routes/ai");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -58,6 +59,7 @@ app.use(
 app.use(helmet());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 app.use(express.json());
+app.use("/api/ai", aiRouter);
 app.options("*", cors()); // fallback
 
 // 🧠 Apollo Server

@@ -142,8 +142,12 @@ These variables are read by your standalone Whisper transcription server (the au
 
 ### `OPENAI_API_KEY`
 
-* **Purpose:** Secret key to upload MP3 files to Whisper.
-* **Used in:** `server.js` (transcribe endpoint).
+* **Purpose:** Secret key for OpenAI requests.
+* **Used in:**
+
+  * Whisper transcription server `server.js` (transcribe endpoint)
+  * Chrome extension backend `POST /api/ai/summarize` route
+
 * **Example:**
 
   ```
@@ -163,6 +167,26 @@ These variables are read by your standalone Whisper transcription server (the au
   ```
 
 This is the glue between your Whisper server and the GraphQL API.
+
+### `OPENAI_MODEL`
+
+* **Purpose:** Optional model override for `POST /api/ai/summarize`.
+* **Default:** `gpt-5-mini`
+* **Example:**
+
+  ```
+  OPENAI_MODEL=gpt-5-mini
+  ```
+
+### `MAX_TRANSCRIPT_CHARS`
+
+* **Purpose:** Maximum transcript length accepted by `POST /api/ai/summarize` before calling OpenAI.
+* **Default:** `50000`
+* **Example:**
+
+  ```
+  MAX_TRANSCRIPT_CHARS=50000
+  ```
 
 ---
 
