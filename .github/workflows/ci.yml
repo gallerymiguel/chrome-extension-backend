@@ -2,41 +2,42 @@ name: Backend CI
 
 on:
   push:
-    branches: [devops-playground]
   pull_request:
-    branches: [main]
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
 
     services:
-      mongo:
+      mongodb:
         image: mongo:7
-        ports: ["27017:27017"]
+        ports:
+          - 27017:27017
         options: >-
-          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node 20
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Lint code
+      - name: Run lint
         run: npm run lint
 
-      - name: Run Jest tests
-        run: npm test -- --runInBand --passWithNoTests
+      - name: Run tests
         env:
-          MONGO_URI: mongodb://localhost:27017/testdb
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: devjwt1234567890devjwt1234567890
+          MONGO_URI: mongodb://127.0.0.1:27017/chrome-extension-backend-ci
+          MONGO_URI_TEST: mongodb://127.0.0.1:27017/chrome-extension-backend-ci
+        run: npm test
