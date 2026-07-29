@@ -1,7 +1,7 @@
 ############################
 # 1 – Builder stage
 ############################
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # work in /app
 WORKDIR /app
@@ -16,7 +16,7 @@ COPY . .
 ############################
 # 2 – Runtime stage
 ############################
-FROM node:18-alpine
+FROM node:22-alpine
 
 # the official image already has a non-root user called “node” (uid = 1000)
 USER node
