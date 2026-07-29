@@ -19,6 +19,13 @@ const PORT = process.env.PORT || 4000;
 app.set("trust proxy", 1);
 module.exports = app;
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "chrome-extension-backend",
+  });
+});
+
 // 🔌 Connect to MongoDB
 connectDB();
 app.use("/webhook", webhookRouter);
