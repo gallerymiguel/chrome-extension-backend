@@ -51,8 +51,9 @@ jobs:
     runs-on: ubuntu-latest
     
     concurrency:
-          group: cloud-run-production
-          cancel-in-progress: true
+      group: cloud-run-production
+      cancel-in-progress: true
+
     permissions:
       contents: read
       id-token: write
@@ -93,11 +94,13 @@ jobs:
           docker push ${{ env.IMAGE }}:latest
 
       - name: Deploy to Cloud Run
+        id: deploy
         uses: google-github-actions/deploy-cloudrun@v3
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE }}:${{ github.sha }}
+
       - name: Verify production health
         run: |
           curl --fail \
