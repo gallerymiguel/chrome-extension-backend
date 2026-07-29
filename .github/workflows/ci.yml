@@ -49,7 +49,10 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     runs-on: ubuntu-latest
-
+    
+    concurrency:
+          group: cloud-run-production
+          cancel-in-progress: true
     permissions:
       contents: read
       id-token: write
@@ -95,3 +98,11 @@ jobs:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
           image: ${{ env.IMAGE }}:${{ github.sha }}
+      - name: Verify production health
+        run: |
+          curl --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            "${{ steps.deploy.outputs.url }}/health"
