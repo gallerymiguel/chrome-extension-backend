@@ -48,3 +48,29 @@ test("valid login returns JWT", async () => {
   expect(res.status).toBe(200);
   expect(res.body.data.login).toMatch(/^ey/);   // token starts with "ey..."
 });
+
+test("login rejects an incorrect password", async () => {
+  await User.create({
+    email: "wrong-password@example.com",
+    password: "Passw0rd!",
+    subscriptionStatus: "inactive",
+  });
+
+  const res = await request(app)
+    .post("/graphql")
+    .send({
+      query: `
+        mutation ($email:String!, $password:String!) {
+          login(email: $email, password: $password)
+        }
+      `,
+      variables: {
+        email: "wrong-password@example.com",
+        password: "WrongPass1!",
+      },
+  });
+
+  expect(res.status).toBe(200);
+  expect(res.body.data).toBeNull();
+  expect(res.body.errors?.[0]?.message).toBe("Invalid credentials");
+});
