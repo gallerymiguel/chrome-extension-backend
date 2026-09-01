@@ -169,4 +169,30 @@ describe("POST /api/ai/summarize", () => {
     const updatedUser = await User.findById(user._id);
     expect(updatedUser.usageCount).toBe(1000);
   });
+
+  test("does not increment usage when OpenAI returns a non-2xx response", async () => {
+    const { authHeader, user } = await createAuthHeader({
+      email: "openai-failure@test.com",
+      usageCount: 2000,
+    });
+
+    global.fetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({
+        error: { message: "Rate limit reached" },
+      }),
+    });
+
+    const res = await request(app)
+      .post("/api/ai/summarize")
+      .set("Authorization", authHeader)
+      .send({ transcript: "A useful transcript." });
+
+    const updatedUser = await User.findById(user._id);
+
+    expect(res.status).toBe(429);
+    expect(res.body.error).toBe("Rate limit reached");
+    expect(updatedUser.usageCount).toBe(2000);
+  });
 });

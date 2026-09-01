@@ -2,6 +2,7 @@
 const request  = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
+const User = require("../src/models/User");
 
 let mongo;
 let app;
@@ -21,6 +22,10 @@ afterAll(async () => {
 });
 
 describe("Usage-count flow", () => {
+  afterEach(async () => {
+    await User.deleteMany({});
+  });
+
   test("register → increment → query usageCount", async () => {
     /* 1️⃣ Register a new user */
     const registerRes = await request(app)
@@ -63,5 +68,42 @@ describe("Usage-count flow", () => {
     /* 5️⃣ Final count should be 15 */
     const final = await gql({ query: `{ getUsageCount }` });
     expect(final.body.data.getUsageCount).toBe(15);
+  });
+
+  test("incrementUsage rejects a request that exceeds the monthly limit", async () => {
+    const registerRes = await request(app)
+      .post("/graphql")
+      .send({
+        query: `
+          mutation ($email:String!, $password:String!) {
+            register(email:$email, password:$password)
+          }
+        `,
+        variables: { email: "limit@test.com", password: "Strong123!" },
+      });
+
+    expect(registerRes.status).toBe(200);
+    token = registerRes.body.data.register;
+
+    await User.updateOne(
+      { email: "limit@test.com" },
+      { $set: { usageCount: 7900 } }
+    );
+
+    const res = await request(app)
+      .post("/graphql")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        query: `mutation { incrementUsage(amount:200) }`,
+      });
+
+    const user = await User.findOne({ email: "limit@test.com" }).lean();
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+    expect(res.body.errors?.[0]?.message).toContain(
+      "Monthly usage limit reached"
+    );
+    expect(user.usageCount).toBe(7900);
   });
 });

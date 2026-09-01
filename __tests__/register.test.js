@@ -55,3 +55,57 @@ test("new user can register and gets JWT", async () => {
   // password should be hashed (not equal to plain text)
   expect(user.password).not.toBe(variables.password);
 });
+
+test("registration rejects a duplicate email", async () => {
+  await User.create({
+    email: "duplicate@example.com",
+    password: "StrongPass1!",
+    subscriptionStatus: "inactive",
+  });
+
+  const res = await request(app)
+    .post("/graphql")
+    .send({
+      query: `
+        mutation Register($email:String!, $password:String!) {
+          register(email: $email, password: $password)
+        }
+      `,
+      variables: {
+        email: "duplicate@example.com",
+        password: "AnotherStrong1!",
+      },
+    });
+
+  const users = await User.find({ email: "duplicate@example.com" }).lean();
+
+  expect(res.status).toBe(200);
+  expect(res.body.data).toBeNull();
+  expect(res.body.errors?.[0]?.message).toBe("User already exists");
+  expect(users).toHaveLength(1);
+});
+
+test("registration rejects a weak password", async () => {
+  const res = await request(app)
+    .post("/graphql")
+    .send({
+      query: `
+        mutation Register($email:String!, $password:String!) {
+          register(email: $email, password: $password)
+        }
+      `,
+      variables: {
+        email: "weak@example.com",
+        password: "password",
+      },
+    });
+
+  const user = await User.findOne({ email: "weak@example.com" }).lean();
+
+  expect(res.status).toBe(200);
+  expect(res.body.data).toBeNull();
+  expect(res.body.errors?.[0]?.message).toBe(
+    "Password must be at least 8 characters, include 1 uppercase, 1 lowercase, 1 number, and 1 symbol."
+  );
+  expect(user).toBeNull();
+});
